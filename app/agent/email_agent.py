@@ -65,7 +65,10 @@ Respond with a JSON object containing "greeting" and "introduction" fields."""
 
 class EmailAgent:
     def __init__(self, user_profile: dict):
-        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ValueError("GROQ_API_KEY environment variable is missing or empty. Please ensure you have configured it in your .env file (for local runs) or GitHub Secrets (for GitHub Actions).")
+        self.client = Groq(api_key=api_key)
         self.model = "openai/gpt-oss-120b"
         self.user_profile = user_profile
 
