@@ -1,0 +1,59 @@
+name: Daily AI Digest Email
+
+on:
+  schedule:
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: udayraj@12345
+          POSTGRES_DB: ai_news_aggregator
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: '3.12'
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Create database tables
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: udayraj@12345
+          POSTGRES_DB: ai_news_aggregator
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+        run: uv run app/database/create_tables.py
+
+      - name: Run daily pipeline
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          MY_EMAIL: ${{ secrets.MY_EMAIL }}
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: udayraj@12345
+          POSTGRES_DB: ai_news_aggregator
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+        run: uv run main.py
