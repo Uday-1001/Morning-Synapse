@@ -44,7 +44,7 @@ def run_daily_pipeline(hours: int = 24, top_n: int = 10) -> dict:
         youtube_result = process_youtube_transcripts()
         results["processing"]["youtube"] = youtube_result
         
-        digest_result = process_digests(limit=10)
+        digest_result = process_digests(limit=15)
         results["digests"] = digest_result
         
         email_result = send_digest_email(hours=hours, top_n=top_n)

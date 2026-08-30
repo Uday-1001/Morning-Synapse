@@ -17,7 +17,10 @@ def generate_email_digest(hours: int = 24, top_n: int = 10) -> EmailDigestRespon
     repo = Repository()
     
     digests = repo.get_recent_digests(hours=hours)
-    digests = digests[:15]
+    if len(digests) < 10:
+        digests = repo.get_recent_digests(hours=max(hours, 168))
+    
+    digests = digests[:20]
     total = len(digests)
     
     if total == 0:
