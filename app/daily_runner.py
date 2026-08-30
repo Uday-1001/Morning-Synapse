@@ -29,9 +29,14 @@ def run_daily_pipeline(hours: int = 24, top_n: int = 10) -> dict:
         "email": {},
         "success": False
     }
-    
     try:
         scraping_results = run_scrapers(hours=hours)
+        scraped_total = len(scraping_results.get("youtube", [])) + len(scraping_results.get("techcrunch", [])) + len(scraping_results.get("venturebeat", []))
+        
+        if scraped_total < 8:
+            logger.info(f"Scraped only {scraped_total} items in the last {hours} hours. Widening search window to 3 days (72 hours)...")
+            scraping_results = run_scrapers(hours=max(hours, 72))
+        
         results["scraping"] = {
             "youtube": len(scraping_results.get("youtube", [])),
             "techcrunch": len(scraping_results.get("techcrunch", [])),

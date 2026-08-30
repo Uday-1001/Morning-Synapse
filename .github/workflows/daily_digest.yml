@@ -39,9 +39,7 @@ jobs:
           cat << 'EOF' > .env
           ${{ secrets.CREDS }}
           EOF
-          # Clean up any existing POSTGRES_ keys to prevent conflicts
           sed -i '/POSTGRES_/d' .env
-          # Explicitly append correct Docker container credentials
           echo "POSTGRES_USER=postgres" >> .env
           echo "POSTGRES_PASSWORD=udayraj@12345" >> .env
           echo "POSTGRES_DB=ai_news_aggregator" >> .env
