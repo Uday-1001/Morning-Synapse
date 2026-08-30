@@ -39,6 +39,7 @@ jobs:
           cat << 'EOF' > .env
           ${{ secrets.CREDS }}
           EOF
+          sed -i 's/POSTGRES_HOST=localhost/POSTGRES_HOST=127.0.0.1/g' .env
 
       - name: Sync dependencies
         run: uv sync
