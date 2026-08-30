@@ -22,17 +22,7 @@ class ChannelVideo(BaseModel):
 
 class YouTubeScraper:
     def __init__(self):
-        proxy_config = None
-        proxy_username = os.getenv("PROXY_USERNAME")
-        proxy_password = os.getenv("PROXY_PASSWORD")
-        
-        if proxy_username and proxy_password:
-            proxy_config = WebshareProxyConfig(
-                proxy_username=proxy_username,
-                proxy_password=proxy_password
-            )
-        
-        self.transcript_api = YouTubeTranscriptApi(proxy_config=proxy_config)
+        pass
 
     def _get_rss_url(self, channel_id: str) -> str:
         return f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
@@ -48,8 +38,19 @@ class YouTubeScraper:
 
     def get_transcript(self, video_id: str) -> Optional[Transcript]:
         try:
-            transcript = self.transcript_api.fetch(video_id)
-            text = " ".join([snippet.text for snippet in transcript.snippets])
+            proxies = None
+            proxy_username = os.getenv("PROXY_USERNAME")
+            proxy_password = os.getenv("PROXY_PASSWORD")
+            if proxy_username and proxy_password:
+                proxy_host = os.getenv("PROXY_HOST", "p.webshare.io")
+                proxy_port = os.getenv("PROXY_PORT", "80")
+                proxy_str = f"http://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}"
+                proxies = {
+                    "http": proxy_str,
+                    "https": proxy_str
+                }
+            transcript_list = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
+            text = " ".join([entry["text"] for entry in transcript_list])
             return Transcript(text=text)
         except (TranscriptsDisabled, NoTranscriptFound):
             return None

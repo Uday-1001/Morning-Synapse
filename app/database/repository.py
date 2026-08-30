@@ -196,6 +196,18 @@ class Repository:
                     "published_at": article.published_at
                 })
         
+        def get_pub_date(x):
+            d = x.get("published_at")
+            if not d:
+                from datetime import timezone
+                return datetime.min.replace(tzinfo=timezone.utc)
+            if d.tzinfo is None:
+                from datetime import timezone
+                return d.replace(tzinfo=timezone.utc)
+            return d
+            
+        articles.sort(key=get_pub_date, reverse=True)
+        
         if limit:
             articles = articles[:limit]
         
