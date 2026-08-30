@@ -16,7 +16,7 @@ def generate_email_digest(hours: int = 24, top_n: int = 10) -> EmailDigestRespon
     email_agent = EmailAgent(USER_PROFILE)
     repo = Repository()
     
-    digests = repo.get_recent_digests(hours=hours)
+    digests = repo.get_recent_digests(hours=max(hours, 72))
     if len(digests) < 10:
         digests = repo.get_recent_digests(hours=max(hours, 168))
     
