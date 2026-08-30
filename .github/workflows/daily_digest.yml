@@ -39,7 +39,14 @@ jobs:
           cat << 'EOF' > .env
           ${{ secrets.CREDS }}
           EOF
-          sed -i 's/POSTGRES_HOST=localhost/POSTGRES_HOST=127.0.0.1/g' .env
+          # Clean up any existing POSTGRES_ keys to prevent conflicts
+          sed -i '/POSTGRES_/d' .env
+          # Explicitly append correct Docker container credentials
+          echo "POSTGRES_USER=postgres" >> .env
+          echo "POSTGRES_PASSWORD=udayraj@12345" >> .env
+          echo "POSTGRES_DB=ai_news_aggregator" >> .env
+          echo "POSTGRES_HOST=127.0.0.1" >> .env
+          echo "POSTGRES_PORT=5432" >> .env
 
       - name: Sync dependencies
         run: uv sync
