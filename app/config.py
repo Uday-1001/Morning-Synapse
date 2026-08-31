@@ -1,5 +1,6 @@
 YOUTUBE_CHANNELS = [
     "UCn8ujwUInbJkBhffxqAPBVQ", # Dave Ebbelaar
+    "UClXAalunTPaX1YV185DWUeg", # Vaibhav Sisinty
     "UCawZsQWqfGSbCI5yjkdVkTA", # Matthew Berman
     "UC7O137-ZgE9R3A9WSpR9Xkg", # Wes Roth
     "UCn5ib3a9Q1nkaM0pU6eUfTg", # Matt Wolfe
