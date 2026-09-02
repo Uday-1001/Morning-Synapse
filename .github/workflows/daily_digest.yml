@@ -1,8 +1,6 @@
 name: Daily AI Digest Email
 
 on:
-  schedule:
-    - cron: '30 2 * * *'
   workflow_dispatch:
 
 jobs:
