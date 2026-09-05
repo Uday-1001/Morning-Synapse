@@ -2,16 +2,18 @@
 
 > **Your Personalized, AI-Curated Daily News Digest**
 
-Morning Synapse is an intelligent, automated news aggregation and curation pipeline. It tracks tech publications and YouTube channels, extracts transcripts, ranks content using a personalized AI Curator Agent, and delivers a beautifully formatted daily news summary directly to your inbox.
+Morning Synapse is an intelligent, automated news aggregation and curation pipeline. It tracks tech publications and YouTube channels, extracts transcripts (with description fallbacks), ranks content using a personalized AI Curator Agent with source-diversity reranking, and delivers a beautifully formatted daily news summary directly to your inbox.
 
 ---
 
 ## 🚀 Key Features
 
 *   **Multi-Source Scraper**: Tracks articles and videos from sources like YouTube channels, TechCrunch (AI category), and VentureBeat.
-*   **Transcript Extraction**: Extracts YouTube video transcripts automatically to summarize video content alongside written articles.
+*   **Transcript & Description Fallback**: Automatically extracts YouTube video transcripts, seamlessly falling back to video descriptions if transcripts are unavailable so video content is never missed.
 *   **Personalized Curator Agent**: Ranks articles and videos dynamically based on your interests and preferences defined in your user profile.
-*   **Beautiful Email Deliverability**: Formats the selected top articles into a structured, elegant email digest containing both HTML and plain-text versions.
+*   **Source Diversity Reranker**: Enforces a balanced mix of YouTube video summaries, tech news, and venture updates in the top 10 email output.
+*   **Expanded Pipeline Capacity**: Capable of processing up to 25 digests per daily run for comprehensive news coverage.
+*   **Beautiful Email Deliverability**: Formats selected top articles into a structured, elegant email digest containing both HTML and plain-text versions.
 *   **Fully Automated**: Features a ready-to-use GitHub Actions workflow configured to deliver your digest daily at **8:00 AM IST**.
 
 ---
@@ -20,39 +22,43 @@ Morning Synapse is an intelligent, automated news aggregation and curation pipel
 
 ```mermaid
 flowchart TD
-    %% Class definitions restricted to smooth Blue, Red, and Green themes
+    %% Class definitions restricted to smooth Blue, Red, Green, and Purple themes
     classDef blueNode fill:#172554,stroke:#3B82F6,stroke-width:2px,color:#EFF6FF;
     classDef redNode fill:#450A0A,stroke:#EF4444,stroke-width:2px,color:#FEE2E2;
     classDef greenNode fill:#022C22,stroke:#10B981,stroke-width:2px,color:#ECFDF5;
+    classDef purpleNode fill:#3B0764,stroke:#A855F7,stroke-width:2px,color:#FAF5FF;
 
     subgraph Scraping ["1. Data Scraping & Fallbacks"]
-        TC["TechCrunch RSS Feed"]:::blueNode --> TC_Scrape["Extract Metadata"]:::blueNode
-        VB["VentureBeat RSS Feed"]:::blueNode --> VB_Scrape["Extract Metadata"]:::blueNode
-        YT["YouTube RSS Feed"]:::blueNode --> YT_Scrape["Extract Metadata"]:::blueNode
+        TC["TechCrunch RSS"]:::blueNode --> TC_Scrape["Extract Article<br/>Metadata"]:::blueNode
+        VB["VentureBeat RSS"]:::blueNode --> VB_Scrape["Extract Article<br/>Metadata"]:::blueNode
+        YT["YouTube RSS"]:::blueNode --> YT_Scrape["Extract Video<br/>Metadata"]:::blueNode
         
-        VB_Scrape --> VB_Md{"Fetch HTML to MD"}:::blueNode
-        VB_Md -->|Crawl Fails| VB_Skip["Skip Article Digest"]:::redNode
-        VB_Md -->|Crawl Success| Store_VB[("Store in DB")]:::greenNode
+        VB_Scrape --> VB_Md{"HTML to MD<br/>Converter"}:::blueNode
+        VB_Md -->|Crawl Fail| VB_Skip["Skip Article"]:::redNode
+        VB_Md -->|Success| Store_VB[("Store in DB")]:::greenNode
         
-        YT_Scrape --> YT_Trans{"Fetch Transcript"}:::blueNode
-        YT_Trans -->|Disabled / Error| YT_Marker["Mark as __UNAVAILABLE__"]:::redNode
+        YT_Scrape --> YT_Trans{"Fetch YouTube<br/>Transcript"}:::blueNode
+        YT_Trans -->|Error / Disabled| YT_FB["Fallback to Video<br/>Description & Title"]:::purpleNode
         YT_Trans -->|Success| Store_YT[("Store in DB")]:::greenNode
+        YT_FB --> Store_YT
     end
 
-    subgraph Digester ["2. Digest Generation & Fallbacks"]
-        DB[("PostgreSQL DB")]:::blueNode -->|Fetch Items Lacking Digests| Gen_Digest[["LLM Digest Generator"]]:::greenNode
-        Gen_Digest -->|Groq API Success| Store_Digest[("Save Digest to DB")]:::greenNode
-        Gen_Digest -->|Groq API Failure / Timeout| Skip_Gen["Skip to Next Item"]:::redNode
+    subgraph Digester ["2. Digest Generation (Cap: 25 Items)"]
+        DB[("PostgreSQL DB")]:::blueNode -->|Undigested Items| Gen_Digest[["LLM Digest<br/>Generator"]]:::greenNode
+        Gen_Digest -->|Groq Success| Store_Digest[("Save Digest<br/>to DB")]:::greenNode
+        Gen_Digest -->|Groq Error| Skip_Gen["Skip Item"]:::redNode
     end
 
-    subgraph Curation ["3. Curation & Email Delivery"]
-        DB_Query[("Query 24h Digests")]:::blueNode --> Check_Digests{"Any Digests?"}:::blueNode
-        Check_Digests -->|No Digests Found| Warning["Log 'No digests available' & Stop"]:::redNode
-        Check_Digests -->|Yes| Curator[["LLM Curator Agent"]]:::greenNode
-        Curator -->|Rank based on User Profile| Email_Agent[["Email Agent"]]:::greenNode
-        Email_Agent -->|Build HTML & Markdown| SMTP["Gmail SMTP SSL"]:::blueNode
-        SMTP -->|Delivery Failure| Email_Err["Log SMTP Error & Terminate"]:::redNode
-        SMTP -->|Delivery Success| Inbox(("Your Inbox")):::greenNode
+    subgraph Curation ["3. Diversity Curation & Email Delivery"]
+        DB_Query[("Query Recent<br/>Digests (24h/72h)")]:::blueNode --> Check_Digests{"Any Digests<br/>Found?"}:::blueNode
+        Check_Digests -->|No Digests| Warning["Log Warning<br/>& Stop"]:::redNode
+        Check_Digests -->|Yes| Pool["Build Balanced Pool<br/>(Max 25 Items)"]:::purpleNode
+        Pool --> Curator[["LLM Curator Agent<br/>(Profile Ranking)"]]:::greenNode
+        Curator --> Diversity[["Source Diversity Selector<br/>(YouTube + News Mix)"]]:::purpleNode
+        Diversity --> Email_Agent[["Email Agent<br/>(HTML & Markdown)"]]:::greenNode
+        Email_Agent --> SMTP["Gmail SMTP SSL"]:::blueNode
+        SMTP -->|SMTP Error| Email_Err["Log Error<br/>& Terminate"]:::redNode
+        SMTP -->|Success| Inbox(("Your Inbox")):::greenNode
     end
 
     %% Flow associations linking storage/queries
@@ -69,10 +75,12 @@ flowchart TD
 
 ### 🛡️ Pipeline Fallbacks & Resilience
 
-*   **YouTube Transcript Failure**: If a video lacks transcripts or the API call fails, the pipeline marks it as `__UNAVAILABLE__` to prevent redundant retries. The runner handles this gracefully without interrupting other videos.
-*   **VentureBeat Scraping Failure**: If crawling the article text fails, the scraper skips that article instead of halting the program.
+*   **YouTube Transcript Fallback**: If a video lacks transcripts or the API call encounters rate limits, the pipeline automatically falls back to using the video's description and title. This guarantees YouTube videos are processed for digests even without captions.
+*   **VentureBeat Scraping Fallback**: If crawling the full article text fails, the scraper gracefully falls back or skips the item without halting the pipeline.
+*   **Source-Balanced Curation & Diversity**: The curation engine fetches a balanced pool across all active source types (YouTube, TechCrunch, VentureBeat) and enforces source diversity during final selection. This ensures your daily email contains a rich mix of video summaries and written news articles rather than being dominated by a single source.
+*   **Expanded Digest Capacity**: Processes up to 25 digests per daily pipeline run to cover recent uploads across all tracked channels and tech feeds.
 *   **LLM API Resilience**: During digest generation, individual failures (e.g. rate limits or server errors from the Groq API) are caught per article and skipped, allowing the rest of the queue to process.
-*   **Empty Digest Fallback**: If no new digests are available for the day, the email service catches the `ValueError`, logs a warning, and stops the execution cleanly rather than sending an empty digest email.
+*   **Empty Digest Safety**: If no new digests are available for the day, the email service catches the `ValueError`, logs a warning, and stops execution cleanly rather than sending an empty digest email.
 
 ---
 
