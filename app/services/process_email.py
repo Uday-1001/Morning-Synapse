@@ -1,3 +1,4 @@
+from typing import List
 import logging
 from dotenv import load_dotenv
 
@@ -11,16 +12,63 @@ from app.services.email import send_email, digest_to_html
 logger = logging.getLogger(__name__)
 
 
+def select_diverse_top_articles(article_details: List[RankedArticleDetail], limit: int = 10) -> List[RankedArticleDetail]:
+    if len(article_details) <= limit:
+        return article_details
+    
+    by_type = {}
+    for a in article_details:
+        by_type.setdefault(a.article_type, []).append(a)
+    
+    selected = []
+    selected_ids = set()
+    
+    target_per_type = max(1, limit // len(by_type)) if by_type else 3
+    for art_type, items in by_type.items():
+        for item in items[:target_per_type]:
+            if item.digest_id not in selected_ids:
+                selected.append(item)
+                selected_ids.add(item.digest_id)
+    
+    for item in article_details:
+        if len(selected) >= limit:
+            break
+        if item.digest_id not in selected_ids:
+            selected.append(item)
+            selected_ids.add(item.digest_id)
+            
+    selected.sort(key=lambda x: x.rank)
+    return selected
+
+
 def generate_email_digest(hours: int = 24, top_n: int = 10) -> EmailDigestResponse:
     curator = CuratorAgent(USER_PROFILE)
     email_agent = EmailAgent(USER_PROFILE)
     repo = Repository()
     
-    digests = repo.get_recent_digests(hours=max(hours, 72))
-    if len(digests) < 10:
-        digests = repo.get_recent_digests(hours=max(hours, 168))
+    raw_digests = repo.get_recent_digests(hours=max(hours, 72))
+    if len(raw_digests) < 10:
+        raw_digests = repo.get_recent_digests(hours=max(hours, 168))
     
-    digests = digests[:20]
+    by_type_digests = {}
+    for d in raw_digests:
+        by_type_digests.setdefault(d["article_type"], []).append(d)
+    
+    digests = []
+    seen_ids = set()
+    for art_type, items in by_type_digests.items():
+        for item in items[:9]:
+            if item["id"] not in seen_ids and len(digests) < 25:
+                digests.append(item)
+                seen_ids.add(item["id"])
+    
+    for d in raw_digests:
+        if len(digests) >= 25:
+            break
+        if d["id"] not in seen_ids:
+            digests.append(d)
+            seen_ids.add(d["id"])
+            
     total = len(digests)
     
     if total == 0:
@@ -50,8 +98,10 @@ def generate_email_digest(hours: int = 24, top_n: int = 10) -> EmailDigestRespon
         for a in ranked_articles
     ]
     
+    diverse_article_details = select_diverse_top_articles(article_details, limit=top_n)
+    
     email_digest = email_agent.create_email_digest_response(
-        ranked_articles=article_details,
+        ranked_articles=diverse_article_details,
         total_ranked=len(ranked_articles),
         limit=top_n
     )

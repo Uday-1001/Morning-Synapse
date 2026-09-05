@@ -29,6 +29,7 @@ Ranking Criteria:
 3. Novelty and significance of the content
 4. Alignment with user's expertise level
 5. Actionability and real-world applicability
+6. Source Diversity: Evaluate YouTube videos, tech news, and venture articles fairly to reflect the value of both video content and text articles.
 
 Scoring Guidelines:
 - 9.0-10.0: Highly relevant, directly aligns with user interests, significant value

@@ -152,19 +152,18 @@ class Repository:
         for d in digests:
             seen_ids.add(f"{d.article_type}:{d.article_id}")
         
-        youtube_videos = self.session.query(YouTubeVideo).filter(
-            YouTubeVideo.transcript.isnot(None),
-            YouTubeVideo.transcript != "__UNAVAILABLE__"
-        ).all()
+        youtube_videos = self.session.query(YouTubeVideo).all()
         for video in youtube_videos:
             key = f"youtube:{video.video_id}"
             if key not in seen_ids:
+                transcript_text = video.transcript if (video.transcript and video.transcript != "__UNAVAILABLE__") else None
+                content_text = transcript_text or video.description or video.title or ""
                 articles.append({
                     "type": "youtube",
                     "id": video.video_id,
                     "title": video.title,
                     "url": video.url,
-                    "content": video.transcript or video.description or "",
+                    "content": content_text,
                     "published_at": video.published_at
                 })
         
